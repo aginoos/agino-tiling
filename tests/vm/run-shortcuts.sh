@@ -29,7 +29,10 @@ for app in deepin-terminal dde-file-manager deepin-editor; do
     sleep 2
 done
 sleep 2
+state "before"
 step "tiling on (Meta+Y)" invoke AginoTilingToggle
+# windows started from a script are not activated (focus stealing prevention): pick one
+step "activate deepin-editor" xdotool search --desktop "$desktop" --class deepin-editor windowactivate --sync
 step "focus next (Meta+J)" invoke AginoTilingFocusNext
 step "focus previous (Meta+K)" invoke AginoTilingFocusPrevious
 step "move next (Meta+Shift+J)" invoke AginoTilingMoveNext
