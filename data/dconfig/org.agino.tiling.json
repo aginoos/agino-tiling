@@ -1,0 +1,16 @@
+{
+    "magic": "dsg.config.meta",
+    "version": "1.0",
+    "contents": {
+        "tiledDesktops": {
+            "value": [],
+            "serial": 0,
+            "flags": [],
+            "name": "Tiled workspaces",
+            "name[zh_CN]": "平铺的工作区",
+            "description": "IDs of the KWin virtual desktops that have automatic tiling switched on",
+            "permissions": "readwrite",
+            "visibility": "private"
+        }
+    }
+}

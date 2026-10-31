@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later. Placeholder: final DCI icons come from a design session. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+  <g fill="#8a8a8a">
+    <rect x="3" y="3" width="10" height="18" rx="2"/>
+    <rect x="15" y="3" width="6" height="8" rx="2"/>
+    <rect x="15" y="13" width="6" height="8" rx="2"/>
+  </g>
+</svg>
