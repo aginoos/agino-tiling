@@ -212,16 +212,29 @@ Item {
         if (windows.length === 0)
             return;
         const area = Workspace.clientArea(KWin.PlacementArea, output, desktop);
-        const mins = windows.map(w => ({ minWidth: w.minSize.width, minHeight: w.minSize.height }));
-        const result = Layout.arrange(layoutOf(desktop.id), area, gap, ratioOf(desktop.id), mins);
+        const none = windows.map(() => ({ minWidth: 0, minHeight: 0 }));
+        let result = Layout.arrange(layoutOf(desktop.id), area, gap, ratioOf(desktop.id), none);
+        for (let i = 0; i < windows.length; ++i)
+            place(windows[i], result.rects[i]);
+        // KWin does not enforce the declared minimum size of most X11 windows (DTK ones included), so
+        // only a size it actually kept larger than the cell overlaps a neighbour (design.md 4.3)
+        const enforced = windows.map((w, i) => {
+            const g = w.frameGeometry, r = result.rects[i];
+            return g.width > r.width + 1 || g.height > r.height + 1 ? { minWidth: g.width, minHeight: g.height }
+                                                                   : { minWidth: 0, minHeight: 0 };
+        });
+        if (enforced.some(m => m.minWidth > 0))
+            result = Layout.arrange(layoutOf(desktop.id), area, gap, ratioOf(desktop.id), enforced);
         const key = desktop.id + "@" + output.name;
         if (result.fallback !== !!fallbackActive[key]) {
             fallbackActive = result.fallback ? put(fallbackActive, key, true) : drop(fallbackActive, key);
             if (result.fallback)
                 log("minimum sizes do not fit, stacking windows on", output.name, windows.length, "windows");
         }
-        for (let i = 0; i < windows.length; ++i)
-            place(windows[i], result.rects[i]);
+        if (result.fallback) {
+            for (let i = 0; i < windows.length; ++i)
+                place(windows[i], result.rects[i]);
+        }
         const stacked = result.fallback || layoutOf(desktop.id) === "monocle";
         overlapping = put(overlapping, desktop.id, stacked);
         const focus = Workspace.activeWindow;
