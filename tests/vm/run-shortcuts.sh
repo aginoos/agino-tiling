@@ -31,8 +31,9 @@ done
 sleep 2
 state "before"
 step "tiling on (Meta+Y)" invoke AginoTilingToggle
-# windows started from a script are not activated (focus stealing prevention): pick one
-step "activate deepin-editor" xdotool search --desktop "$desktop" --class deepin-editor windowactivate --sync
+# windows started from a script are not activated (focus stealing prevention), and xdotool's
+# windowactivate is refused too: click into the master cell
+step "click the master window" xdotool mousemove 100 400 click 1
 step "focus next (Meta+J)" invoke AginoTilingFocusNext
 step "focus previous (Meta+K)" invoke AginoTilingFocusPrevious
 step "move next (Meta+Shift+J)" invoke AginoTilingMoveNext
