@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6c79ff"/>
+      <stop offset="1" stop-color="#3d4bdc"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#a9b2ff"/>
+      <stop offset="0.5" stop-color="#6c79ff" stop-opacity="0"/>
+      <stop offset="1" stop-color="#2a36b8"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
+      <feOffset dy="3"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.18"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <g filter="url(#shadow)">
+    <rect x="20" y="25" width="216" height="206" rx="22" fill="url(#bg)"/>
+    <rect x="21" y="26" width="214" height="204" rx="21" fill="none" stroke="url(#rim)" stroke-width="2"/>
+  </g>
+  <g fill="#fcfcff">
+    <rect x="58" y="70" width="66" height="116" rx="6"/>
+    <rect x="134" y="70" width="64" height="53" rx="6"/>
+    <rect x="134" y="133" width="64" height="53" rx="6"/>
+  </g>
+</svg>

@@ -74,8 +74,8 @@ DockItemInfo TilingApplet::dockItemInfo()
     info.itemKey = QStringLiteral("agino-tiling");
     info.settingKey = QStringLiteral("agino-tiling");
     info.visible = visible();
-    // dccIcon left empty: multitaskview's path is <prefix>/share/dde-dock/icons/dcc-setting/, but no
-    // established name for third-party items; revisit with the final icons.
+    // the Control Center finds dcc-<name>.dci in its icon directory by itself; the path is the fallback
+    info.dccIcon = QStringLiteral(AGINO_TILING_DCC_ICON);
     return info;
 }
 

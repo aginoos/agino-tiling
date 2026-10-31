@@ -22,6 +22,9 @@ set_target_properties(agino-tiling-applet PROPERTIES
     PREFIX ""
     OUTPUT_NAME ${AGINO_TILING_APPLET_ID}
 )
+target_compile_definitions(agino-tiling-applet PRIVATE
+    AGINO_TILING_DCC_ICON="${CMAKE_INSTALL_PREFIX}/${AGINO_TILING_DCC_ICON_DIR}/dcc-agino-tiling.dci"
+)
 # D_APPLET_CLASS expands to the plugin metadata macros moc has to look at.
 set_property(TARGET agino-tiling-applet APPEND PROPERTY AUTOMOC_MACRO_NAMES "D_APPLET_CLASS")
 target_link_libraries(agino-tiling-applet PRIVATE
