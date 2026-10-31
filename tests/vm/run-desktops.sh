@@ -1,7 +1,8 @@
 #!/bin/bash
-# Runs IN the test VM's session after p0-run.sh, with the agino-tiling prototype and its dock
-# applet loaded (docs/tiling.md 8.1): per-desktop state, KWin quick tile inside a tiled
-# desktop, a file dialog, and which global shortcuts already use Meta/Super+Shift.
+# Runs IN the test VM's session with the agino-tiling script and its dock applet loaded
+# (docs/design.md 2, 4.1, 4.6): per-desktop state (desktop 2 tiled, desktop 1 not), KWin quick
+# tile left inside a tiled desktop (taken over by the script), a file dialog (stays floating),
+# and the applet D-Bus reports (CurrentChanged / TilingChanged) in the journal.
 W() { echo "--- $1"; wmctrl -lGx | awk '$2>=0{printf "d%d %-34s %5d %5d %5d %5d\n", $2, $7, $3, $4, $5, $6}'; }
 inv() { dbus-send --session --print-reply --dest=org.kde.kglobalaccel /component/kwin org.kde.kglobalaccel.Component.invokeShortcut string:"$1" >/dev/null; }
 T=$(date +%s)
@@ -18,7 +19,7 @@ xdotool key ctrl+o; sleep 3
 W "with the editor's file dialog open"
 xdotool key Escape; sleep 1
 echo "--- state reports"
-journalctl --user --since @$T --no-pager | grep -E "AGAPPLET state|AGTILE (tiling|added|changed|size)" | sed -E 's/.*(AGAPPLET|AGTILE)/\1/' | cut -c1-150
+journalctl --user --since @$T --no-pager | grep -E "AGAPPLET|agino-tiling: (tiling|quick tile|layout|float|minimum)" | sed -E 's/.*(AGAPPLET|agino-tiling:)/\1/' | cut -c1-150
 echo "--- DDE shortcuts with Super"
 busctl --user call org.deepin.dde.Keybinding1 /org/deepin/dde/Keybinding1 org.deepin.dde.Keybinding1 ListAllShortcuts |
     grep -oE "<[A-Za-z_]+>(<[A-Za-z_]+>)*[A-Za-z0-9_]+" | sort -u | grep Super | tr '\n' ' '; echo
