@@ -1,0 +1,106 @@
+{
+    "magic": "dsg.config.meta",
+    "version": "1.0",
+    "contents": {
+        "appId": {
+            "value": "agino-tiling",
+            "serial": 0,
+            "flags": [],
+            "name": "appId",
+            "description": "provider of the shortcut",
+            "permissions": "",
+            "visibility": "private"
+        },
+        "displayName": {
+            "value": "Next layout",
+            "serial": 0,
+            "flags": [],
+            "name": "displayName",
+            "description": "name shown in the Control Center",
+            "permissions": "",
+            "visibility": "private"
+        },
+        "displayOrder": {
+            "value": 90,
+            "serial": 0,
+            "flags": [],
+            "name": "displayOrder",
+            "description": "display order within the category",
+            "permissions": "",
+            "visibility": "private"
+        },
+        "hotkeys": {
+            "value": [
+                "Meta+Space"
+            ],
+            "serial": 0,
+            "flags": [],
+            "name": "hotkeys",
+            "description": "key combinations",
+            "permissions": "readwrite",
+            "visibility": "private"
+        },
+        "keyEventFlags": {
+            "value": 2,
+            "serial": 0,
+            "flags": [],
+            "name": "keyEventFlags",
+            "description": "1=press, 2=release, 4=repeat",
+            "permissions": "",
+            "visibility": "private"
+        },
+        "triggerType": {
+            "value": 1,
+            "serial": 0,
+            "flags": [],
+            "name": "triggerType",
+            "description": "command",
+            "permissions": "",
+            "visibility": "private"
+        },
+        "triggerValue": {
+            "value": [
+                "/usr/bin/dbus-send",
+                "--session",
+                "--type=method_call",
+                "--dest=org.kde.kglobalaccel",
+                "/component/kwin",
+                "org.kde.kglobalaccel.Component.invokeShortcut",
+                "string:AginoTilingNextLayout"
+            ],
+            "serial": 0,
+            "flags": [],
+            "name": "triggerValue",
+            "description": "invoke the KWin script action AginoTilingNextLayout",
+            "permissions": "",
+            "visibility": "private"
+        },
+        "category": {
+            "value": "Tiling",
+            "serial": 0,
+            "flags": [],
+            "name": "category",
+            "description": "category in the Control Center",
+            "permissions": "",
+            "visibility": "private"
+        },
+        "enabled": {
+            "value": true,
+            "serial": 0,
+            "flags": [],
+            "name": "enabled",
+            "description": "shortcut enabled",
+            "permissions": "readwrite",
+            "visibility": "private"
+        },
+        "modifiable": {
+            "value": true,
+            "serial": 0,
+            "flags": [],
+            "name": "modifiable",
+            "description": "the user can change the keys",
+            "permissions": "",
+            "visibility": "private"
+        }
+    }
+}

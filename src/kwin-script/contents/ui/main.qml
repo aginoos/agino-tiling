@@ -591,80 +591,82 @@ Item {
         onFinished: returnValue => root.applyTiledList(returnValue.length > 0 ? returnValue[0] : [])
     }
 
+    // The actions have no keys here: dde-services' shortcut service owns the keys (data/shortcuts,
+    // design.md 2.2), shows them in the Control Center and invokes these actions through kglobalaccel.
     ShortcutHandler {
         name: "AginoTilingToggle"
         text: "agino tiling: toggle tiling on the current desktop"
-        sequence: "Meta+Y"
+        sequence: ""
         onActivated: root.toggleCurrent()
     }
 
     ShortcutHandler {
         name: "AginoTilingFocusNext"
         text: "agino tiling: focus the next tiled window"
-        sequence: "Meta+J"
+        sequence: ""
         onActivated: root.focusStep(1)
     }
 
     ShortcutHandler {
         name: "AginoTilingFocusPrevious"
         text: "agino tiling: focus the previous tiled window"
-        sequence: "Meta+K"
+        sequence: ""
         onActivated: root.focusStep(-1)
     }
 
     ShortcutHandler {
         name: "AginoTilingMoveNext"
         text: "agino tiling: swap the active window with the next one"
-        sequence: "Meta+Shift+J"
+        sequence: ""
         onActivated: root.reorderActive((list, id) => Layout.moveBy(list, id, 1))
     }
 
     ShortcutHandler {
         name: "AginoTilingMovePrevious"
         text: "agino tiling: swap the active window with the previous one"
-        sequence: "Meta+Shift+K"
+        sequence: ""
         onActivated: root.reorderActive((list, id) => Layout.moveBy(list, id, -1))
     }
 
     ShortcutHandler {
         name: "AginoTilingSwapMaster"
         text: "agino tiling: swap the active window with the master"
-        sequence: "Meta+Return"
+        sequence: ""
         onActivated: root.reorderActive((list, id) => Layout.swapMaster(list, id))
     }
 
     ShortcutHandler {
         name: "AginoTilingShrinkMaster"
         text: "agino tiling: shrink the master area"
-        sequence: "Meta+Ctrl+H"
+        sequence: ""
         onActivated: root.adjustRatio(-0.05)
     }
 
     ShortcutHandler {
         name: "AginoTilingGrowMaster"
         text: "agino tiling: grow the master area"
-        sequence: "Meta+Ctrl+L"
+        sequence: ""
         onActivated: root.adjustRatio(0.05)
     }
 
     ShortcutHandler {
         name: "AginoTilingNextLayout"
         text: "agino tiling: next layout"
-        sequence: "Meta+Space"
+        sequence: ""
         onActivated: root.nextLayout()
     }
 
     ShortcutHandler {
         name: "AginoTilingMonocle"
         text: "agino tiling: single window layout on/off"
-        sequence: "Meta+F"
+        sequence: ""
         onActivated: root.toggleMonocle()
     }
 
     ShortcutHandler {
         name: "AginoTilingToggleFloat"
         text: "agino tiling: float or tile the active window"
-        sequence: "Meta+Shift+Space"
+        sequence: ""
         onActivated: root.toggleFloat()
     }
 

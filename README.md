@@ -4,9 +4,9 @@ agino 的平铺窗口模式：在 DDE + KWin（X11）上，按工作区一键打
 
 - 新开的窗口自动进入布局（主区加堆栈、多列、单窗口满屏），关闭后其余窗口自动铺满。
 - 任务栏上的"平铺"按钮（多任务视图左边）切换当前工作区，并显示状态；也可以用 Super+Y。
-- 快捷键沿用主流平铺窗口管理器的习惯（Super+J/K、Super+Return、Super+Space 等，见 [docs/design.md](docs/design.md)）。
+- 快捷键沿用主流平铺窗口管理器的习惯（Super+J/K、Super+Return、Super+Space 等，见 [docs/design.md](docs/design.md)），在控制中心"键盘 → 快捷键 → 平铺"里可以修改。
 
-组成：KWin 脚本（布局引擎）、dde-shell 任务栏小程序、DConfig 定义。目标环境：agino 26（Debian 13 + DDE，X11）。当前状态：0.1.1。
+组成：KWin 脚本（布局引擎）、dde-shell 任务栏小程序、DConfig 定义、DDE 快捷键服务的快捷键定义。目标环境：agino 26（Debian 13 + DDE，X11），运行时需要 dde-services 1.0.39 起的快捷键服务。当前状态：0.1.2。
 
 ## 构建
 

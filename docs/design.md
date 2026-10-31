@@ -1,6 +1,6 @@
 # agino-tiling 设计文档
 
-版本：0.1.1（2026-10-31）。决策来源：agino infra `docs/decisions.md` D-168、D-169；P0 原型与实测见 infra `docs/tiling.md` 8.1。本文是实现和测试的依据；实现中发现与本文不符时，先改本文再改代码。
+版本：0.1.2（2026-10-31）。决策来源：agino infra `docs/decisions.md` D-168、D-169、D-171、D-172；P0 原型与实测见 infra `docs/tiling.md` 8.1。本文是实现和测试的依据；实现中发现与本文不符时，先改本文再改代码。
 
 ## 1. 目标与范围
 
@@ -34,23 +34,37 @@ KWin 脚本只能**发起**会话总线调用（`DBusCall`），不能导出对�
 
 `desktopId` 是 KWin 虚拟桌面的 `id`（UUID 字符串，KWin 存在 kwinrc 里，跨登录不变）。小程序不清理已删除工作区的 ID；脚本忽略不存在的 ID。
 
-### 2.2 脚本的全局快捷键（kglobalaccel 组件 `kwin`）
+### 2.2 快捷键：DDE 快捷键服务按键，脚本动作执行（D-172）
 
-| 名称 | 默认键 | 作用 |
-|---|---|---|
-| `AginoTilingToggle` | Meta+Y | 当前工作区平铺开/关（任务栏按钮也调用它） |
-| `AginoTilingFocusNext` / `AginoTilingFocusPrevious` | Meta+J / Meta+K | 焦点到下一个/上一个平铺窗口 |
-| `AginoTilingMoveNext` / `AginoTilingMovePrevious` | Meta+Shift+J / Meta+Shift+K | 当前窗口与下一个/上一个交换位置 |
-| `AginoTilingSwapMaster` | Meta+Return | 与主区交换；当前就是主区时与堆栈第一个交换 |
-| `AginoTilingShrinkMaster` / `AginoTilingGrowMaster` | Meta+Ctrl+H / Meta+Ctrl+L | 主区宽度 −5% / +5%，范围 15%–85% |
-| `AginoTilingNextLayout` | Meta+Space | 主区加堆栈 → 多列 → 单窗口满屏 → 回到开头 |
-| `AginoTilingMonocle` | Meta+F | 单窗口满屏开/关（关时回到之前的布局） |
-| `AginoTilingToggleFloat` | Meta+Shift+Space | 当前窗口浮动 / 回到平铺 |
-| `AginoTilingSync` | 无 | 小程序启动时调用：脚本重新 `GetTiledDesktops`、应用、`CurrentChanged` |
+按键由 dde-services 的快捷键服务负责（`dde-services` 源码 `src/plugin-qt/shortcut/DEVELOPER_GUIDE.md`），所以快捷键出现在控制中心"键盘 → 快捷键"的"平铺"分类里，用户可以改键，冲突也由服务检测和提示。
 
-默认键依据见 infra `tiling.md` 4A（已核对 DDE、KWin、fcitx5 无冲突）。
+- **定义**：`data/shortcuts/`，由 `make-configs.py` 生成，生成结果入库。
+  - 注册文件 `agino-tiling.ini` 装到 `/usr/share/deepin/org.deepin.dde.keybinding/`。`SubPaths` 用逗号分隔（QSettings 列表）。开发文档写的是分号，但 QSettings 把分号当作注释的开始，服务只会读到第一项。
+  - 每个快捷键一份 DConfig（`org.deepin.dde.keybinding` 下的 `agino-tiling.shortcut.<名称>`）：
+    - 字段：appId `agino-tiling`，分类 `Tiling`，`modifiable` 为真。
+    - 触发方式是命令：`dbus-send` 调用 kglobalaccel 的 `invokeShortcut <脚本动作>`（组件 `kwin`）。
+  - 名称的翻译用上下文 `agino-tiling`，装到 `/usr/share/deepin/org.deepin.dde.keybinding/translations/agino-tiling/`。
+- **脚本动作**：KWin 脚本的 `ShortcutHandler` 都不设按键，只保留名称，供上面的命令、任务栏按钮（`AginoTilingToggle`）和小程序启动时的同步（`AginoTilingSync`）调用。
+- **生效**：dde-services 对注册目录声明了 dpkg 触发器，装包、卸载后所有已登录会话自动重载（`ReloadConfigs`）。
 
-kglobalaccel 把每个动作的当前按键写进用户的 `~/.config/kglobalshortcutsrc`，并由常驻的 kglobalacceld 保存在内存里；脚本里的默认键只在动作第一次注册时生效。**以后的版本若改默认键，已安装的用户不会跟着变**，要迁移就得另写迁移（KDE 的做法是 kconf_update），不能只改这里的默认值。
+| 名称（DConfig 子路径后缀） | 脚本动作 | 默认键 | 触发 | 作用 |
+|---|---|---|---|---|
+| `toggle` | `AginoTilingToggle` | Meta+Y | 松开 | 当前工作区平铺开/关 |
+| `focus-next` / `focus-previous` | `AginoTilingFocusNext` / `...Previous` | Meta+J / Meta+K | 按下 | 焦点到下一个/上一个平铺窗口 |
+| `move-next` / `move-previous` | `AginoTilingMoveNext` / `...Previous` | Meta+Shift+J / Meta+Shift+K | 按下 | 当前窗口与下一个/上一个交换位置 |
+| `swap-master` | `AginoTilingSwapMaster` | Meta+Return | 按下 | 与主区交换；当前就是主区时与堆栈第一个交换 |
+| `shrink-master` / `grow-master` | `AginoTilingShrinkMaster` / `...GrowMaster` | Meta+Ctrl+H / Meta+Ctrl+L | 按下 + 按住连发 | 主区宽度 −5% / +5%，范围 15%–85% |
+| `next-layout` | `AginoTilingNextLayout` | Meta+Space | 松开 | 主区加堆栈 → 多列 → 单窗口满屏 → 回到开头 |
+| `monocle` | `AginoTilingMonocle` | Meta+F | 松开 | 单窗口满屏开/关（关时回到之前的布局） |
+| `float` | `AginoTilingToggleFloat` | Meta+Shift+Space | 松开 | 当前窗口浮动 / 回到平铺 |
+| — | `AginoTilingSync` | 无 | — | 小程序启动时调用：脚本重新 `GetTiledDesktops`、应用、`CurrentChanged` |
+
+默认键依据见 infra `tiling.md` 4A（已核对 DDE、KWin、fcitx5 无冲突）。deepin 25 上 uos-ai 占用 Meta+Space；agino 不带 uos-ai。
+
+- **改默认键**：用户改过的键存在服务的 DConfig 用户层，没改过的用户随包里的默认值走，不需要迁移。
+- **代价**：每次按键多启动一个 `dbus-send` 进程。tile1 实测，从服务发出 `ShortcutActivated` 到 KWin 收到动作约 50 ms。
+
+0.1.0、0.1.1 的脚本动作自带 kglobalaccel 按键，用户的 `~/.config/kglobalshortcutsrc` 里会留着旧按键，与服务抢键。agino 正式发布前不写迁移（infra D-50），测试机手工删掉 `AginoTiling*` 行即可。
 
 ### 2.3 时序
 
@@ -126,15 +140,19 @@ Super+↑/↓ 在 agino 上本来是失效的：dde-daemon 注册的 "Window Abs
   - 按钮：开/关两种状态，`agino-tiling-on`、`agino-tiling-off`，装到 `/usr/share/dsg/icons/`。两种状态靠形状区分，不只靠颜色：开是靛蓝底上的"主区加堆栈"，关是灰底上两个重叠的浮动窗口。风格对齐多任务视图图标：256 尺寸、3 倍、全彩，深色模式链接到浅色。
   - 任务栏设置（控制中心）：`dcc-agino-tiling`，装到 `/usr/share/dde-dock/icons/dcc-setting/`。控制中心按 `dcc-<name>.dci` 自己找到它，`dccIcon` 填这个路径作后备。16 尺寸、3 倍、调色板前景层，跟随主题着色。
   - 源文件 `data/icons/src/*.svg`，用 `data/icons/make-dci.py` 生成 .dci，两者都入库。
-- 悬停提示："平铺：已开启/已关闭（Super+Y）"。
+- 悬停提示："平铺：已开启/已关闭（按键）"。按键是悬停时向快捷键服务（`GetShortcut agino-tiling.shortcut.toggle`）取的当前值，用户在控制中心改键后跟着变；取不到时只显示状态。
 - 注册服务失败（另一个实例已占用）只记 warning，按钮仍可点击（快捷键路径不依赖服务）。
 
 ## 6. 翻译
 
-agino 的 14 种语言（ar、de、en、es、fr、it、ja、ko、pt_BR、ru、uk、zh_CN、zh_HK、zh_TW），用 Qt `.ts`，范围是小程序的可见文字。KWin 快捷键的说明文字只在 KWin 的快捷键设置里出现（DDE 没有这个界面），保持英文。
+agino 的 14 种语言（ar、de、en、es、fr、it、ja、ko、pt_BR、ru、uk、zh_CN、zh_HK、zh_TW），用 Qt `.ts`。翻译范围：
+- 小程序的可见文字：`src/dock-applet/translations/`。
+- 控制中心里显示的快捷键名称和分类名：`data/shortcuts/translations/`，上下文 `agino-tiling`。
+
+KWin 脚本动作的说明文字不在 DDE 的任何界面出现，保持英文。
 
 ## 7. 测试
 
 - 单元测试：布局计算写成纯 JS 函数（`src/kwin-script/contents/code/layout.js`），用 `qmltestrunner` 测各布局、间隙、最小尺寸退让、交换。
-- 虚拟机：`tests/vm/` 的脚本（来自 P0）扩展到本文各条行为，在 DDE X11 会话里跑。
+- 虚拟机：`tests/vm/` 的脚本（来自 P0）扩展到本文各条行为，在 DDE X11 会话里跑。`run-ddekeys.sh` 逐个按真实按键，核对快捷键服务的 `ShortcutActivated` 和对 kglobalaccel 的 `invokeShortcut`，再测按住连发和经服务改键。
 - 真机：多屏、HiDPI、睡眠唤醒（P1 末尾）。
