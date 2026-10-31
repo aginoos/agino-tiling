@@ -39,6 +39,9 @@ class TilingApplet : public DAppletDock
     Q_OBJECT
     Q_PROPERTY(bool tiling READ tiling NOTIFY tilingChanged)
     Q_PROPERTY(QString iconName READ iconName NOTIFY iconNameChanged)
+    // Key of the on/off shortcut as the DDE shortcut service has it now (the user can change it in
+    // the Control Center); empty when unknown or disabled.
+    Q_PROPERTY(QString toggleKey READ toggleKey NOTIFY toggleKeyChanged)
 public:
     explicit TilingApplet(QObject *parent = nullptr);
 
@@ -47,21 +50,25 @@ public:
 
     bool tiling() const { return m_tiling; }
     QString iconName() const;
+    QString toggleKey() const { return m_toggleKey; }
 
     void setCurrent(bool tiled);
     void setDesktopTiled(const QString &desktopId, bool tiled);
     QStringList tiledDesktops() const { return m_tiledDesktops; }
 
     Q_INVOKABLE void toggle();
+    Q_INVOKABLE void refreshToggleKey();
 
 Q_SIGNALS:
     void tilingChanged();
     void iconNameChanged();
+    void toggleKeyChanged();
 
 private:
     void invokeShortcut(const QString &name);
 
     bool m_tiling = false;
+    QString m_toggleKey;
     QStringList m_tiledDesktops;
     Dtk::Core::DConfig *m_config = nullptr;
 };

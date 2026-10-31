@@ -11,12 +11,16 @@
 <context>
     <name>tiling</name>
     <message>
-        <source>Tiling: on (Super+Y)</source>
-        <translation>Lado a lado: ativado (Super+Y)</translation>
+        <source>Tiling: on</source>
+        <translation>Lado a lado: ativado</translation>
     </message>
     <message>
-        <source>Tiling: off (Super+Y)</source>
-        <translation>Lado a lado: desativado (Super+Y)</translation>
+        <source>Tiling: off</source>
+        <translation>Lado a lado: desativado</translation>
+    </message>
+    <message>
+        <source>%1 (%2)</source>
+        <translation>%1 (%2)</translation>
     </message>
 </context>
 </TS>

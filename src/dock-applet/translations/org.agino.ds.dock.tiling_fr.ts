@@ -11,12 +11,16 @@
 <context>
     <name>tiling</name>
     <message>
-        <source>Tiling: on (Super+Y)</source>
-        <translation>Mosaïque : activée (Super+Y)</translation>
+        <source>Tiling: on</source>
+        <translation>Mosaïque : activée</translation>
     </message>
     <message>
-        <source>Tiling: off (Super+Y)</source>
-        <translation>Mosaïque : désactivée (Super+Y)</translation>
+        <source>Tiling: off</source>
+        <translation>Mosaïque : désactivée</translation>
+    </message>
+    <message>
+        <source>%1 (%2)</source>
+        <translation>%1 (%2)</translation>
     </message>
 </context>
 </TS>

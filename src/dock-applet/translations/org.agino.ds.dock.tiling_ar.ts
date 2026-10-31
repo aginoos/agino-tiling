@@ -11,12 +11,16 @@
 <context>
     <name>tiling</name>
     <message>
-        <source>Tiling: on (Super+Y)</source>
-        <translation>تبليط النوافذ: مفعّل (Super+Y)</translation>
+        <source>Tiling: on</source>
+        <translation>تبليط النوافذ: مفعّل</translation>
     </message>
     <message>
-        <source>Tiling: off (Super+Y)</source>
-        <translation>تبليط النوافذ: معطّل (Super+Y)</translation>
+        <source>Tiling: off</source>
+        <translation>تبليط النوافذ: معطّل</translation>
+    </message>
+    <message>
+        <source>%1 (%2)</source>
+        <translation>%1 (%2)</translation>
     </message>
 </context>
 </TS>

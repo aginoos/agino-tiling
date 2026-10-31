@@ -11,12 +11,16 @@
 <context>
     <name>tiling</name>
     <message>
-        <source>Tiling: on (Super+Y)</source>
-        <translation>Мозаїка: увімкнено (Super+Y)</translation>
+        <source>Tiling: on</source>
+        <translation>Мозаїка: увімкнено</translation>
     </message>
     <message>
-        <source>Tiling: off (Super+Y)</source>
-        <translation>Мозаїка: вимкнено (Super+Y)</translation>
+        <source>Tiling: off</source>
+        <translation>Мозаїка: вимкнено</translation>
+    </message>
+    <message>
+        <source>%1 (%2)</source>
+        <translation>%1 (%2)</translation>
     </message>
 </context>
 </TS>

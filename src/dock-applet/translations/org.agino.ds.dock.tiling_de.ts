@@ -11,12 +11,16 @@
 <context>
     <name>tiling</name>
     <message>
-        <source>Tiling: on (Super+Y)</source>
-        <translation>Kacheln: an (Super+Y)</translation>
+        <source>Tiling: on</source>
+        <translation>Kacheln: an</translation>
     </message>
     <message>
-        <source>Tiling: off (Super+Y)</source>
-        <translation>Kacheln: aus (Super+Y)</translation>
+        <source>Tiling: off</source>
+        <translation>Kacheln: aus</translation>
+    </message>
+    <message>
+        <source>%1 (%2)</source>
+        <translation>%1 (%2)</translation>
     </message>
 </context>
 </TS>

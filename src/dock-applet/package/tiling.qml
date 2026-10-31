@@ -16,7 +16,8 @@ AppletDockItem {
 
     PanelToolTip {
         id: toolTip
-        text: Applet.tiling ? qsTr("Tiling: on (Super+Y)") : qsTr("Tiling: off (Super+Y)")
+        readonly property string stateText: Applet.tiling ? qsTr("Tiling: on") : qsTr("Tiling: off")
+        text: Applet.toggleKey ? qsTr("%1 (%2)").arg(stateText).arg(Applet.toggleKey) : stateText
         toolTipX: DockPanelPositioner.x
         toolTipY: DockPanelPositioner.y
     }
@@ -60,6 +61,7 @@ AppletDockItem {
     HoverHandler {
         onHoveredChanged: {
             if (hovered) {
+                Applet.refreshToggleKey()
                 toolTipShowTimer.start()
             } else {
                 if (toolTipShowTimer.running)

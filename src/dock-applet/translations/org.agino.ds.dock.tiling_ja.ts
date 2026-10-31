@@ -11,12 +11,16 @@
 <context>
     <name>tiling</name>
     <message>
-        <source>Tiling: on (Super+Y)</source>
-        <translation>タイル表示: オン (Super+Y)</translation>
+        <source>Tiling: on</source>
+        <translation>タイル表示: オン</translation>
     </message>
     <message>
-        <source>Tiling: off (Super+Y)</source>
-        <translation>タイル表示: オフ (Super+Y)</translation>
+        <source>Tiling: off</source>
+        <translation>タイル表示: オフ</translation>
+    </message>
+    <message>
+        <source>%1 (%2)</source>
+        <translation>%1 (%2)</translation>
     </message>
 </context>
 </TS>

@@ -5,11 +5,14 @@
 
 #include <DConfig>
 
+#include <QDBusArgument>
 #include <QDBusConnection>
 #include <QDBusError>
 #include <QDBusMessage>
 #include <QDBusPendingCall>
+#include <QDBusPendingCallWatcher>
 #include <QDebug>
+#include <QRegularExpression>
 
 DCORE_USE_NAMESPACE
 
@@ -20,6 +23,23 @@ static const QString ObjectPath = QStringLiteral("/org/agino/Tiling1");
 static const QString ConfigAppId = QStringLiteral("agino-tiling");
 static const QString ConfigName = QStringLiteral("org.agino.tiling");
 static const QString ConfigKey = QStringLiteral("tiledDesktops");
+// data/shortcuts: the on/off shortcut registered with dde-services' shortcut service
+static const QString ToggleShortcutId = QStringLiteral("agino-tiling.shortcut.toggle");
+
+// "<Super><Shift>y" (the shortcut service's accelerator format) -> "Super+Shift+Y"
+static QString displayKey(const QString &accel)
+{
+    static const QRegularExpression modifier(QStringLiteral("<([^>]+)>"));
+    QStringList parts;
+    for (auto it = modifier.globalMatch(accel); it.hasNext();)
+        parts << it.next().captured(1);
+    QString key = QString(accel).remove(modifier);
+    if (key.isEmpty())
+        return {};
+    key[0] = key[0].toUpper();
+    parts << key;
+    return parts.join(QLatin1Char('+'));
+}
 
 TilingAdaptor::TilingAdaptor(TilingApplet *applet)
     : QObject(applet)
@@ -110,6 +130,34 @@ void TilingApplet::setDesktopTiled(const QString &desktopId, bool tiled)
 void TilingApplet::toggle()
 {
     invokeShortcut(QStringLiteral("AginoTilingToggle"));
+}
+
+void TilingApplet::refreshToggleKey()
+{
+    auto msg = QDBusMessage::createMethodCall(QStringLiteral("org.deepin.dde.Keybinding1"), QStringLiteral("/org/deepin/dde/Keybinding1"),
+                                              QStringLiteral("org.deepin.dde.Keybinding1"), QStringLiteral("GetShortcut"));
+    msg << ToggleShortcutId;
+    auto watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(msg), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this](QDBusPendingCallWatcher *call) {
+        call->deleteLater();
+        // (id, name, category, hotkeys, display name, display category, b, b)
+        QString key;
+        const QDBusMessage reply = call->reply();
+        if (reply.type() == QDBusMessage::ReplyMessage && !reply.arguments().isEmpty()) {
+            QString id, name, category;
+            QStringList hotkeys;
+            const auto arg = reply.arguments().constFirst().value<QDBusArgument>();
+            arg.beginStructure();
+            arg >> id >> name >> category >> hotkeys;
+            arg.endStructure();
+            if (!hotkeys.isEmpty())
+                key = displayKey(hotkeys.first());
+        }
+        if (key != m_toggleKey) {
+            m_toggleKey = key;
+            Q_EMIT toggleKeyChanged();
+        }
+    });
 }
 
 void TilingApplet::invokeShortcut(const QString &name)

@@ -11,12 +11,16 @@
 <context>
     <name>tiling</name>
     <message>
-        <source>Tiling: on (Super+Y)</source>
-        <translation>平鋪：已開啟（Super+Y）</translation>
+        <source>Tiling: on</source>
+        <translation>平鋪：已開啟</translation>
     </message>
     <message>
-        <source>Tiling: off (Super+Y)</source>
-        <translation>平鋪：已關閉（Super+Y）</translation>
+        <source>Tiling: off</source>
+        <translation>平鋪：已關閉</translation>
+    </message>
+    <message>
+        <source>%1 (%2)</source>
+        <translation>%1（%2）</translation>
     </message>
 </context>
 </TS>
