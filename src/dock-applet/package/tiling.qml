@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// P0 prototype (docs/tiling.md 8.1): dock button that switches tiling on the current desktop.
-// Filled square = tiling on. Logs its position and taps (AGAPPLET) to the journal.
+// Dock button that switches tiling on the current workspace (modeled on dde-shell's multitaskview.qml).
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 
@@ -12,44 +11,61 @@ AppletDockItem {
     id: tiling
     dockOrder: 14
 
-    function logPosition(tag) {
-        const p = tiling.mapToGlobal(tiling.width / 2, tiling.height / 2)
-        const w = tiling.Window.window
-        console.warn("AGAPPLET", tag, "center", Math.round(p.x), Math.round(p.y),
-                     "size", Math.round(tiling.width), Math.round(tiling.height), "visible", tiling.visible,
-                     "window", w ? (w.x + "," + w.y + " " + w.width + "x" + w.height) : "none")
+    Accessible.role: Accessible.Button
+    Accessible.name: toolTip.text
+
+    PanelToolTip {
+        id: toolTip
+        text: Applet.tiling ? qsTr("Tiling: on (Super+Y)") : qsTr("Tiling: off (Super+Y)")
+        toolTipX: DockPanelPositioner.x
+        toolTipY: DockPanelPositioner.y
     }
 
-    Rectangle {
+    D.DciIcon {
         anchors.centerIn: parent
-        width: parent.width * 0.6
-        height: parent.height * 0.6
-        radius: 4
-        color: Applet.tiling ? border.color : "transparent"
-        border.width: 2
-        border.color: D.DTK.themeType === D.ApplicationHelper.DarkType ? "white" : "black"
-        Text {
-            anchors.centerIn: parent
-            text: "T"
-            color: Applet.tiling ? (D.DTK.themeType === D.ApplicationHelper.DarkType ? "black" : "white") : parent.border.color
-        }
+        name: Applet.iconName
+        scale: Panel.rootObject.dockItemMaxSize * 9 / 14 / Dock.MAX_DOCK_TASKMANAGER_ICON_SIZE
+        sourceSize: Qt.size(Dock.MAX_DOCK_TASKMANAGER_ICON_SIZE, Dock.MAX_DOCK_TASKMANAGER_ICON_SIZE)
     }
 
-    HoverHandler {
-        onHoveredChanged: if (hovered) tiling.logPosition("hovered")
+    Timer {
+        id: toolTipShowTimer
+        interval: 50
+        onTriggered: {
+            var point = tiling.mapToItem(null, tiling.width / 2, tiling.height / 2)
+            toolTip.DockPanelPositioner.bounding = Qt.rect(point.x, point.y, toolTip.width, toolTip.height)
+            toolTip.open()
+        }
     }
 
     TapHandler {
         acceptedButtons: Qt.LeftButton
+        gesturePolicy: TapHandler.WithinBounds
         onTapped: {
-            tiling.logPosition("tapped")
             Applet.toggle()
+            toolTip.close()
         }
     }
 
-    Timer {
-        interval: 3000
-        running: true
-        onTriggered: tiling.logPosition("placed")
+    TapHandler {
+        acceptedButtons: Qt.NoButton
+        acceptedDevices: PointerDevice.TouchScreen
+        gesturePolicy: TapHandler.WithinBounds
+        onTapped: {
+            Applet.toggle()
+            toolTip.close()
+        }
+    }
+
+    HoverHandler {
+        onHoveredChanged: {
+            if (hovered) {
+                toolTipShowTimer.start()
+            } else {
+                if (toolTipShowTimer.running)
+                    toolTipShowTimer.stop()
+                toolTip.close()
+            }
+        }
     }
 }
