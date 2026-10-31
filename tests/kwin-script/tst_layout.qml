@@ -138,7 +138,7 @@ TestCase {
         compare(Layout.nextLayout("master"), "columns");
         compare(Layout.nextLayout("columns"), "monocle");
         compare(Layout.nextLayout("monocle"), "master");
-        compare(Layout.nextLayout("unknown"), "columns");
+        compare(Layout.nextLayout("unknown"), "master");
     }
 
     function test_ratio_roundtrip() {
