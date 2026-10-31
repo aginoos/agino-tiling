@@ -6,7 +6,7 @@ agino 的平铺窗口模式：在 DDE + KWin（X11）上，按工作区一键打
 - 任务栏上的"平铺"按钮（多任务视图左边）切换当前工作区，并显示状态；也可以用 Super+Y。
 - 快捷键沿用主流平铺窗口管理器的习惯（Super+J/K、Super+Return、Super+Space 等，见 [docs/design.md](docs/design.md)）。
 
-组成：KWin 脚本（布局引擎）、dde-shell 任务栏小程序、DConfig 定义。目标环境：agino 26（Debian 13 + DDE，X11）。当前状态：P1 开发中。
+组成：KWin 脚本（布局引擎）、dde-shell 任务栏小程序、DConfig 定义。目标环境：agino 26（Debian 13 + DDE，X11）。当前状态：0.1.0。任务栏按钮暂用占位图标，正式图标待设计。
 
 ## 构建
 
