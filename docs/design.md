@@ -1,6 +1,6 @@
 # agino-tiling 设计文档
 
-版本：P1 草案（2026-10-31）。决策来源：agino infra `docs/decisions.md` D-168、D-169；P0 原型与实测见 infra `docs/tiling.md` 8.1。本文是实现和测试的依据；实现中发现与本文不符时，先改本文再改代码。
+版本：0.1.1（2026-10-31）。决策来源：agino infra `docs/decisions.md` D-168、D-169；P0 原型与实测见 infra `docs/tiling.md` 8.1。本文是实现和测试的依据；实现中发现与本文不符时，先改本文再改代码。
 
 ## 1. 目标与范围
 
@@ -103,11 +103,16 @@ kglobalaccel 把每个动作的当前按键写进用户的 `~/.config/kglobalsho
 DDE 的 Super+←/→/↑/↓ 经 fakewm 变成 KWin 的快速平铺和最大化。脚本监听参与平铺窗口的快速平铺和最大化状态（KWin 6.3 的具体属性/信号名在实现时核对源码）：
 
 - 快速平铺到左半 → 移到主区；到右半 → 移到堆栈第一个；然后取消快速平铺并重新布局。
-- 最大化 → 取消最大化，并把工作区切到单窗口满屏；取消最大化（Super+↓）且当前是单窗口满屏 → 回到之前的布局。
+- 最大化 → 工作区切到单窗口满屏，这个窗口**保持最大化**。
+- 取消最大化（Super+↓）且当前是单窗口满屏 → 回到之前的布局。
+- 用其他方式离开单窗口满屏（Super+F、Super+Space）→ 重新布局时取消窗口的最大化。脚本自己取消最大化后 800 ms 内收到的"取消最大化"不当作 Super+↓。
+- 关闭平铺时，最大化的窗口保持最大化，不恢复进入平铺前的位置。
+
+0.1.0 在进入单窗口满屏时立刻取消了最大化。这样 fakewm 处理 Super+↓ 时去清除一个本来就没有的状态，KWin 不发信号，脚本也就收不到 Super+↓。0.1.1 改为保持最大化。
 
 不平铺的工作区里一切保持 DDE/KWin 原有行为。
 
-已知限制（2026-10-31，tile1）：agino 上 Super+↑ 本身不会最大化。dde-kwin 的 `/etc/xdg/kglobalshortcutsrc` 把 Meta+Up 绑到 "Window Absolute Maximize"，而上游 KWin 6.3.6 没有这个动作。所以"Super+↑ 切单窗口满屏"要等这个绑定修好才生效；Super+F 不受影响。
+Super+↑/↓ 在 agino 上本来是失效的：dde-daemon 注册的 "Window Absolute Maximize"/"Window Unmaximize" 只有 deepin 的 KWin 分支实现。dde-appearance 1.1.84.5 起由 fakewm 提供（infra D-171）。更早的版本上只有 Super+F 能切换单窗口满屏。
 
 ### 4.7 日志
 
@@ -117,7 +122,11 @@ DDE 的 Super+←/→/↑/↓ 经 fakewm 变成 KWin 的快速平铺和最大化
 
 - `DAppletDock` 子类；`dockOrder` 14（多任务视图是 15）；`dockItemInfo` 的 name/itemKey/settingKey 为 `agino-tiling`，displayName 为"平铺"（可翻译），用户可在任务栏设置里隐藏。
 - 属性 `tiling`（bool，NOTIFY）；`Q_INVOKABLE toggle()`。
-- 图标：开/关两种状态，名为 `agino-tiling-on`、`agino-tiling-off`（DCI，由设计会话出图；之前用占位 SVG）。悬停提示："平铺：已开启/已关闭（Super+Y）"。
+- 图标（DCI）：
+  - 按钮：开/关两种状态，`agino-tiling-on`、`agino-tiling-off`，装到 `/usr/share/dsg/icons/`。两种状态靠形状区分，不只靠颜色：开是靛蓝底上的"主区加堆栈"，关是灰底上两个重叠的浮动窗口。风格对齐多任务视图图标：256 尺寸、3 倍、全彩，深色模式链接到浅色。
+  - 任务栏设置（控制中心）：`dcc-agino-tiling`，装到 `/usr/share/dde-dock/icons/dcc-setting/`。控制中心按 `dcc-<name>.dci` 自己找到它，`dccIcon` 填这个路径作后备。16 尺寸、3 倍、调色板前景层，跟随主题着色。
+  - 源文件 `data/icons/src/*.svg`，用 `data/icons/make-dci.py` 生成 .dci，两者都入库。
+- 悬停提示："平铺：已开启/已关闭（Super+Y）"。
 - 注册服务失败（另一个实例已占用）只记 warning，按钮仍可点击（快捷键路径不依赖服务）。
 
 ## 6. 翻译
