@@ -50,6 +50,8 @@ KWin 脚本只能**发起**会话总线调用（`DBusCall`），不能导出对�
 
 默认键依据见 infra `tiling.md` 4A（已核对 DDE、KWin、fcitx5 无冲突）。
 
+kglobalaccel 把每个动作的当前按键写进用户的 `~/.config/kglobalshortcutsrc`，并由常驻的 kglobalacceld 保存在内存里；脚本里的默认键只在动作第一次注册时生效。**以后的版本若改默认键，已安装的用户不会跟着变**，要迁移就得另写迁移（KDE 的做法是 kconf_update），不能只改这里的默认值。
+
 ### 2.3 时序
 
 - **脚本启动**（登录、KWin 重启）：调用 `GetTiledDesktops`；失败（小程序还没起来）就什么也不做，等 `AginoTilingSync`。
@@ -104,6 +106,8 @@ DDE 的 Super+←/→/↑/↓ 经 fakewm 变成 KWin 的快速平铺和最大化
 - 最大化 → 取消最大化，并把工作区切到单窗口满屏；取消最大化（Super+↓）且当前是单窗口满屏 → 回到之前的布局。
 
 不平铺的工作区里一切保持 DDE/KWin 原有行为。
+
+已知限制（2026-10-31，tile1）：agino 上 Super+↑ 本身不会最大化。dde-kwin 的 `/etc/xdg/kglobalshortcutsrc` 把 Meta+Up 绑到 "Window Absolute Maximize"，而上游 KWin 6.3.6 没有这个动作。所以"Super+↑ 切单窗口满屏"要等这个绑定修好才生效；Super+F 不受影响。
 
 ### 4.7 日志
 

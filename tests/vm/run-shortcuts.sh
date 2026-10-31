@@ -13,7 +13,8 @@ invoke() {
 }
 desktop=$(wmctrl -d | awk '$2 == "*" { print $1 }')
 state() {
-    echo "--- $1 (active: $(xdotool getactivewindow getwindowclassname 2>/dev/null))"
+    # xdotool getactivewindow fails on KWin here (BadRequest on _NET_ACTIVE_WINDOW)
+    echo "--- $1 (active: $(xprop -root _NET_ACTIVE_WINDOW | awk '{print $NF}'))"
     wmctrl -lGx | awk -v d="$desktop" '$2 == d { printf "%-34s %5d %5d %5d %5d\n", $7, $3, $4, $5, $6 }'
 }
 step() {
@@ -23,6 +24,7 @@ step() {
     state "$label"
 }
 
+# a locked screen swallows every click and key (tests/vm on build: session-unlock.sh first)
 start=$(date +%s)
 for app in deepin-terminal dde-file-manager deepin-editor; do
     setsid -f "$app" >/dev/null 2>&1
