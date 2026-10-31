@@ -1,0 +1,19 @@
+{
+    "KPackageStructure": "KWin/Script",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Email": "admin@aginoos.com",
+                "Name": "agino Team"
+            }
+        ],
+        "Description": "Automatic master/stack tiling per virtual desktop (P0 prototype, D-168)",
+        "EnabledByDefault": false,
+        "Id": "agino-tiling",
+        "License": "GPL-3.0-or-later",
+        "Name": "agino tiling (prototype)",
+        "Version": "0.0.1"
+    },
+    "X-Plasma-API": "declarativescript",
+    "X-Plasma-MainScript": "ui/main.qml"
+}
