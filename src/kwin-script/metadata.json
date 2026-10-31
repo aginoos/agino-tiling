@@ -7,13 +7,14 @@
                 "Name": "agino Team"
             }
         ],
-        "Description": "Automatic master/stack tiling per virtual desktop (P0 prototype, D-168)",
-        "EnabledByDefault": false,
+        "Description": "Automatic tiling per virtual desktop (master/stack, columns, single window)",
+        "EnabledByDefault": true,
         "Id": "agino-tiling",
         "License": "GPL-3.0-or-later",
-        "Name": "agino tiling (prototype)",
-        "Version": "0.0.1"
+        "Name": "agino tiling",
+        "Version": "0.1.0"
     },
     "X-Plasma-API": "declarativescript",
+    "X-Plasma-API-Minimum-Version": "6.0",
     "X-Plasma-MainScript": "ui/main.qml"
 }

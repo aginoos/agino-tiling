@@ -1,16 +1,16 @@
 #!/bin/bash
-# Runs IN the test VM's graphical session (DISPLAY, DBUS_SESSION_BUS_ADDRESS set): P0 checks for
-# a tiling KWin script (docs/tiling.md 8.1). Prints window geometries (wmctrl -lG: client area)
+# Runs IN the test VM's graphical session (DISPLAY, DBUS_SESSION_BUS_ADDRESS set): basic checks for
+# the agino-tiling KWin script (docs/design.md 4.2, 4.4). Prints window geometries (wmctrl -lG: client area)
 # before tiling, after turning it on, after new windows open, and after turning it off, plus the
 # MapNotify/ConfigureNotify timing of the new windows (xmapwatch.py) and the script's log.
-# usage: p0-run.sh TOGGLE_SHORTCUT [NEW_APPS...]
+# usage: run-basic.sh [TOGGLE_SHORTCUT=AginoTilingToggle] [NEW_APPS...]
 #   TOGGLE_SHORTCUT  kglobalaccel name of the script's on/off action in component "kwin"
 #   NEW_APPS         commands opened while tiling is on (default: deepin-system-monitor deepin-calculator)
 # env TOGGLE_OFF: a separate action that turns tiling off (Krohnkite: KrohnkiteFloatingLayout);
 #   it is also invoked once at the start so the "before" state is floating.
 set -u
 here=$(dirname "$(readlink -f "$0")")
-toggle=$1; shift
+toggle=${1:-AginoTilingToggle}; [ $# -eq 0 ] || shift
 off=${TOGGLE_OFF:-$toggle}
 new_apps=("$@")
 [ ${#new_apps[@]} -gt 0 ] || new_apps=(deepin-system-monitor deepin-calculator)
@@ -35,7 +35,7 @@ windows "before"
 invoke "$toggle"
 sleep 1.5
 windows "tiling on"
-python3 -I "$here/xmapwatch.py" $((4 * ${#new_apps[@]} + 3)) > /tmp/p0-xmap.txt &
+python3 -I "$here/xmapwatch.py" $((4 * ${#new_apps[@]} + 3)) > /tmp/xmap.txt &
 watcher=$!
 sleep 0.5
 for app in "${new_apps[@]}"; do
@@ -44,10 +44,10 @@ for app in "${new_apps[@]}"; do
 done
 wait "$watcher"
 echo "--- X events of new windows"
-cat /tmp/p0-xmap.txt
+cat /tmp/xmap.txt
 windows "after new windows"
 invoke "$off"
 sleep 1.5
 windows "tiling off"
 echo "--- script log"
-journalctl --user --since @"$start" --no-pager | grep -E 'AGTILE|KROHNKITE|qml:' | cut -c1-240 | tail -40
+journalctl --user --since @"$start" --no-pager | grep -E 'agino-tiling:|qml:' | cut -c1-240 | tail -40
