@@ -124,7 +124,8 @@ Item {
     // ---- bookkeeping: which window belongs to which desktop's order ----
 
     function restore(w, id) {
-        if (saved[id] && !w.fullScreen)
+        // a window maximized in the single-window layout stays maximized (4.6)
+        if (saved[id] && !w.fullScreen && w.maximizeMode === 0)
             w.frameGeometry = saved[id];
     }
 
@@ -202,6 +203,15 @@ Item {
     function place(w, r) {
         const id = wid(w);
         placed = put(placed, id, r);
+        if (w.maximizeMode !== 0) {
+            // 4.6: the maximized window of the single-window layout stays maximized, so that Super+Down
+            // (unmaximize) can leave the layout again; any other layout takes the maximize back
+            const desktop = desktopOf(w);
+            if (desktop && layoutOf(desktop.id) === "monocle")
+                return;
+            unmaximized = put(unmaximized, id, Date.now());
+            w.setMaximize(false, false);
+        }
         const g = w.frameGeometry;
         if (!w.move && !w.resize && (g.x !== r.x || g.y !== r.y || g.width !== r.width || g.height !== r.height))
             w.frameGeometry = Qt.rect(r.x, r.y, r.width, r.height);
@@ -374,15 +384,14 @@ Item {
         settle.restart();
     }
 
-    // 4.6: maximize -> single-window layout; unmaximize while in it -> previous layout.
+    // 4.6: maximize -> single-window layout, the window stays maximized; unmaximize while in it
+    // (Super+Down) -> previous layout. Our own unmaximize (place()) is ignored for 800 ms.
     function onMaximizedChanged(w) {
         const desktop = inTiledOrder(w);
         if (!desktop)
             return;
         const did = desktop.id;
         if (w.maximizeMode !== 0) {
-            unmaximized = put(unmaximized, wid(w), Date.now());
-            w.setMaximize(false, false);
             if (layoutOf(did) !== "monocle")
                 setLayout(did, "monocle");
             Workspace.activeWindow = w;
