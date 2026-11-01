@@ -30,6 +30,25 @@ function ratioFromWidth(width, area, gap) {
     return clampRatio(width / (inner(area, gap).width - gap))
 }
 
+// The ratios that keep the master at least masterMin and the stack at least stackMin wide (0 = no
+// limit). Used by the shrink / grow keys only; the layout itself does not enforce minimum sizes (4.3).
+function ratioLimits(area, gap, masterMin, stackMin) {
+    const usable = inner(area, gap).width - gap
+    return { min: masterMin > 0 ? masterMin / usable : 0, max: stackMin > 0 ? 1 - stackMin / usable : 1 }
+}
+
+// The ratio after a shrink / grow key: delta clamped to the global range and to `limits`. A key never
+// moves the ratio further past a limit it is already beyond, and when both minimum widths cannot fit
+// the limits are ignored (4.3 stacks the windows then).
+function adjustedRatio(ratio, delta, limits) {
+    const target = clampRatio(ratio + delta)
+    const lo = Math.max(MIN_RATIO, limits.min)
+    const hi = Math.min(MAX_RATIO, limits.max)
+    if (limits.min > limits.max || lo > hi)
+        return target
+    return delta < 0 ? Math.max(target, Math.min(ratio, lo)) : Math.min(target, Math.max(ratio, hi))
+}
+
 // Master on the left (ratio of the width), the others share the right side top to bottom.
 function masterStack(area, gap, ratio, count) {
     if (count <= 0)

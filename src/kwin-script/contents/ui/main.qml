@@ -460,12 +460,33 @@ Item {
         layoutDesktop(desktop);
     }
 
+    // The ratio range that keeps the master and the stack of every screen of the desktop at least as
+    // wide as the minimum width they declare (4.3): the shrink / grow keys stop there.
+    function ratioLimitsOf(desktop) {
+        let lo = 0, hi = 1;
+        for (const output of Workspace.screens) {
+            const windows = members(desktop, output);
+            if (windows.length < 2)
+                continue;
+            let stackMin = 0;
+            for (let i = 1; i < windows.length; ++i)
+                stackMin = Math.max(stackMin, windows[i].minSize.width);
+            const area = Workspace.clientArea(KWin.PlacementArea, output, desktop);
+            const limits = Layout.ratioLimits(area, gap, windows[0].minSize.width, stackMin);
+            lo = Math.max(lo, limits.min);
+            hi = Math.min(hi, limits.max);
+        }
+        return { min: lo, max: hi };
+    }
+
     function adjustRatio(delta) {
-        const did = Workspace.currentDesktop.id;
+        const desktop = Workspace.currentDesktop;
+        const did = desktop.id;
         if (!tiled[did])
             return;
-        ratios = put(ratios, did, Layout.clampRatio(ratioOf(did) + delta));
-        layoutDesktop(Workspace.currentDesktop);
+        const limits = layoutOf(did) === "master" ? ratioLimitsOf(desktop) : { min: 0, max: 1 };
+        ratios = put(ratios, did, Layout.adjustedRatio(ratioOf(did), delta, limits));
+        layoutDesktop(desktop);
     }
 
     function nextLayout() {

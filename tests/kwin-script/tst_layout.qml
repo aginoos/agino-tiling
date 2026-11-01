@@ -67,6 +67,35 @@ TestCase {
         compare(Layout.masterStack(area, 0, 5, 2)[0].width, 850);
     }
 
+    function test_ratioLimits() {
+        // area 1000 wide, gap 8: the width the ratio applies to is 1000 - 2 * 8 - 8 = 976
+        const l = Layout.ratioLimits(area, 8, 488, 244)
+        fuzzyCompare(l.min, 0.5, 0.001)
+        fuzzyCompare(l.max, 0.75, 0.001)
+        compare(Layout.ratioLimits(area, 8, 0, 0), { min: 0, max: 1 })
+    }
+
+    function test_adjustedRatio() {
+        const limits = { min: 0.5, max: 0.75 }
+        fuzzyCompare(Layout.adjustedRatio(0.55, -0.05, limits), 0.5, 0.001)
+        fuzzyCompare(Layout.adjustedRatio(0.5, -0.05, limits), 0.5, 0.001)       // already at the limit
+        fuzzyCompare(Layout.adjustedRatio(0.45, -0.05, limits), 0.45, 0.001)     // beyond it: does not go further
+        fuzzyCompare(Layout.adjustedRatio(0.45, 0.05, limits), 0.5, 0.001)       // but may grow
+        fuzzyCompare(Layout.adjustedRatio(0.7, 0.05, limits), 0.75, 0.001)
+        fuzzyCompare(Layout.adjustedRatio(0.75, 0.05, limits), 0.75, 0.001)
+        fuzzyCompare(Layout.adjustedRatio(0.8, 0.05, limits), 0.8, 0.001)        // beyond the upper limit
+        fuzzyCompare(Layout.adjustedRatio(0.8, -0.05, limits), 0.75, 0.001)
+    }
+
+    function test_adjustedRatio_unfit_and_unlimited() {
+        // the two minimum widths together are wider than the area: limits are ignored (4.3)
+        fuzzyCompare(Layout.adjustedRatio(0.55, -0.05, { min: 0.7, max: 0.3 }), 0.5, 0.001)
+        fuzzyCompare(Layout.adjustedRatio(0.55, 0.05, { min: 0, max: 1 }), 0.6, 0.001)
+        // the global range still applies
+        fuzzyCompare(Layout.adjustedRatio(0.16, -0.05, { min: 0, max: 1 }), 0.15, 0.001)
+        fuzzyCompare(Layout.adjustedRatio(0.84, 0.05, { min: 0, max: 1 }), 0.85, 0.001)
+    }
+
     function test_masterStack_offset_area() {
         const r = Layout.masterStack({ x: 1920, y: 40, width: 800, height: 400 }, 10, 0.5, 2);
         compare(r[0].x, 1930);
