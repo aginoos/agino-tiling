@@ -21,6 +21,7 @@ Item {
     property var ratios: ({})           // desktop id -> master width ratio
     property var order: ({})            // desktop id -> window ids in layout order (first = master)
     property var overlapping: ({})      // desktop id -> last layout stacks windows (raise the focused one)
+    property var autoFloating: ({})     // window id -> true while the declared minimum size does not fit (4.3)
     property var userFloating: ({})     // window id -> true (design 4.1)
     property var saved: ({})            // window id -> geometry before tiling (4.4)
     property var placed: ({})           // window id -> rect this script last set
@@ -92,6 +93,9 @@ Item {
     function structural(w) {
         if (!w.normalWindow || w.transient || w.dialog || w.specialWindow || w.splash || w.utility)
             return false;
+        // a modal window is a dialog of its application, even when it was not marked as one (4.1)
+        if (w.modal)
+            return false;
         if (w.keepAbove || w.skipTaskbar || !w.resizeable || !w.moveable)
             return false;
         if (w.minSize.width > 0 && w.minSize.width === w.maxSize.width && w.minSize.height === w.maxSize.height)
@@ -105,8 +109,9 @@ Item {
         return structural(w) && !w.minimized && !w.fullScreen;
     }
 
-    // Windows of a desktop that take part right now, in layout order.
-    function members(desktop, output) {
+    // Windows of a desktop that take part right now, in layout order, including the ones that float for the
+    // time being because their declared minimum size does not fit (4.3).
+    function activeMembers(desktop, output) {
         const map = windowMap();
         const result = [];
         for (const id of order[desktop.id] || []) {
@@ -115,6 +120,11 @@ Item {
                 result.push(w);
         }
         return result;
+    }
+
+    // The windows that are laid out right now.
+    function members(desktop, output) {
+        return activeMembers(desktop, output).filter(w => !autoFloating[wid(w)]);
     }
 
     function ids(windows) {
@@ -158,6 +168,7 @@ Item {
                 restore(map[id], id);
             saved = drop(saved, id);
             placed = drop(placed, id);
+            autoFloating = drop(autoFloating, id);
         }
     }
 
@@ -217,11 +228,34 @@ Item {
             w.frameGeometry = Qt.rect(r.x, r.y, r.width, r.height);
     }
 
+    // 4.3: a window whose declared minimum size does not fit its cell floats (at the size it had before
+    // tiling) instead of squeezing the others; it takes part again as soon as it fits.
+    function updateAutoFloating(all, floatedIndices) {
+        for (let i = 0; i < all.length; ++i) {
+            const id = wid(all[i]);
+            const floats = floatedIndices.indexOf(i) >= 0;
+            if (floats && !autoFloating[id]) {
+                autoFloating = put(autoFloating, id, true);
+                placed = drop(placed, id);
+                restore(all[i], id);
+                log("float, minimum size does not fit", all[i].resourceClass, all[i].minSize.width + "x" + all[i].minSize.height);
+            } else if (!floats && autoFloating[id]) {
+                autoFloating = drop(autoFloating, id);
+                log("tile again, minimum size fits", all[i].resourceClass);
+            }
+        }
+    }
+
     function layoutOutput(desktop, output) {
-        const windows = members(desktop, output);
-        if (windows.length === 0)
+        const all = activeMembers(desktop, output);
+        if (all.length === 0)
             return;
         const area = Workspace.clientArea(KWin.PlacementArea, output, desktop);
+        const declared = all.map(w => ({ minWidth: Math.max(0, w.minSize.width), minHeight: Math.max(0, w.minSize.height) }));
+        updateAutoFloating(all, Layout.floatedForMinimums(layoutOf(desktop.id), area, gap, ratioOf(desktop.id), declared));
+        const windows = all.filter(w => !autoFloating[wid(w)]);
+        if (windows.length === 0)
+            return;
         const none = windows.map(() => ({ minWidth: 0, minHeight: 0 }));
         let result = Layout.arrange(layoutOf(desktop.id), area, gap, ratioOf(desktop.id), none);
         for (let i = 0; i < windows.length; ++i)
@@ -346,6 +380,7 @@ Item {
         w.outputChanged.connect(changed);
         w.keepAboveChanged.connect(changed);
         w.skipTaskbarChanged.connect(changed);
+        w.modalChanged.connect(changed);
         w.tileChanged.connect(() => onTileChanged(w));
         w.maximizedChanged.connect(() => onMaximizedChanged(w));
         w.interactiveMoveResizeFinished.connect(() => onMoveResizeFinished(w));
@@ -407,7 +442,7 @@ Item {
     // 4.5: drop on another tiled window swaps; right-edge resize of the master sets the ratio.
     function onMoveResizeFinished(w) {
         const desktop = inTiledOrder(w);
-        if (!desktop)
+        if (!desktop || autoFloating[wid(w)])
             return;
         const did = desktop.id;
         const id = wid(w);

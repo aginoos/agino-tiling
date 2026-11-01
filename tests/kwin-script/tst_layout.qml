@@ -96,6 +96,28 @@ TestCase {
         fuzzyCompare(Layout.adjustedRatio(0.84, 0.05, { min: 0, max: 1 }), 0.85, 0.001)
     }
 
+    function test_misfit_and_floatedForMinimums() {
+        // area 1000x600, gap 8, ratio 0.5: the master is 488 wide, the stack cells 488 wide and 288 high
+        const none = { minWidth: 0, minHeight: 0 }
+        compare(Layout.misfit("master", area, 8, 0.5, [none, none, none]), -1)
+        compare(Layout.misfit("master", area, 8, 0.5, [none, { minWidth: 500, minHeight: 0 }, none]), 1)
+        compare(Layout.misfit("master", area, 8, 0.5, [{ minWidth: 489, minHeight: 0 }, none]), 0)
+        compare(Layout.misfit("master", area, 8, 0.5, [none, none, { minWidth: 0, minHeight: 300 }]), 2)
+        compare(Layout.misfit("monocle", area, 8, 0.5, [{ minWidth: 5000, minHeight: 5000 }, none]), -1)
+        compare(Layout.misfit("master", area, 8, 0.5, [{ minWidth: 5000, minHeight: 5000 }]), -1)
+        compare(Layout.floatedForMinimums("master", area, 8, 0.5, [none, none]), [])
+        // one window does not fit: it floats, the others are tried again
+        compare(Layout.floatedForMinimums("master", area, 8, 0.5, [none, { minWidth: 500, minHeight: 0 }, none]), [1])
+        // the master is too narrow for its minimum: it floats and the other window is alone
+        compare(Layout.floatedForMinimums("master", area, 8, 0.5, [{ minWidth: 700, minHeight: 0 }, none]), [0])
+        // the stack gets crowded: the first window that is too low floats, then the other has room again
+        const low = { minWidth: 0, minHeight: 250 }
+        compare(Layout.floatedForMinimums("master", area, 8, 0.5, [none, low, low, low]), [1])
+        // the last window stays even if its minimum is larger than the box
+        compare(Layout.floatedForMinimums("master", area, 8, 0.5, [{ minWidth: 5000, minHeight: 0 }, { minWidth: 5000, minHeight: 0 }]), [0])
+        compare(Layout.floatedForMinimums("columns", area, 8, 0.5, [none, { minWidth: 600, minHeight: 0 }]), [1])
+    }
+
     function test_masterStack_offset_area() {
         const r = Layout.masterStack({ x: 1920, y: 40, width: 800, height: 400 }, 10, 0.5, 2);
         compare(r[0].x, 1930);

@@ -97,7 +97,33 @@ function firstMisfit(rects, mins) {
     return -1
 }
 
-// 4.3: the master stays, everything else shares the full stack column (focus decides who is on top).
+// Index (in layout order) of the first window whose declared minimum size does not fit its cell, or -1.
+// The single-window layout gives every window the whole box, so nothing misfits there.
+function misfit(layout, area, gap, ratio, mins) {
+    const count = mins.length
+    if (layout === "monocle" || count < 2)
+        return -1
+    const rects = layout === "columns" ? columns(area, gap, count) : masterStack(area, gap, ratio, count)
+    return firstMisfit(rects, mins)
+}
+
+// 4.3: the indices (in layout order) of the windows that float because their declared minimum size does
+// not fit. The one that does not fit goes first, then the rest is tried again; the windows that remain are
+// laid out as usual. A window is never floated when it is the last one.
+function floatedForMinimums(layout, area, gap, ratio, mins) {
+    const floated = []
+    const rest = mins.map((m, i) => i)
+    while (rest.length > 1) {
+        const i = misfit(layout, area, gap, ratio, rest.map(k => mins[k]))
+        if (i < 0)
+            break
+        floated.push(rest[i])
+        rest.splice(i, 1)
+    }
+    return floated
+}
+
+// 4.3 (before 0.1.4 and as the last resort): the master stays, everything else shares the full stack column (focus decides who is on top).
 function stackFallback(area, gap, ratio, count) {
     if (count <= 1)
         return masterStack(area, gap, ratio, count)

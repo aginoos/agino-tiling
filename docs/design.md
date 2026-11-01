@@ -1,6 +1,6 @@
 # agino-tiling 设计文档
 
-版本：0.1.3（2026-11-01）。决策来源：agino infra `docs/decisions.md` D-168、D-169、D-171、D-172、D-188（4.3 的限幅、4.1 的弹窗验证）；P0 原型与实测见 infra `docs/tiling.md` 8.1。本文是实现和测试的依据；实现中发现与本文不符时，先改本文再改代码。
+版本：0.1.4（2026-11-02）。决策来源：agino infra `docs/decisions.md` D-168、D-169、D-171、D-172、D-188（4.3 的限幅和自动浮动、4.1 的弹窗验证和模态窗口）；P0 原型与实测见 infra `docs/tiling.md` 8.1。本文是实现和测试的依据；实现中发现与本文不符时，先改本文再改代码。
 
 ## 1. 目标与范围
 
@@ -86,7 +86,7 @@ KWin 脚本只能**发起**会话总线调用（`DBusCall`），不能导出对�
 
 ### 4.1 哪些窗口参与
 
-参与：`normalWindow`，且不是 transient、dialog、splash、utility、specialWindow；不是最小化、全屏、置顶（keepAbove）、skipTaskbar；可移动、可缩放；不是固定尺寸（最小尺寸等于最大尺寸）；只在一个工作区上；不在用户浮动集合里；`resourceClass` 不在配置 `floatingClasses`（kwinrc `[Script-agino-tiling]`，逗号分隔，默认空）里。
+参与：`normalWindow`，且不是 transient、dialog、splash、utility、specialWindow，也不是 modal（只带模态状态、类型却是普通窗口的"对话框"；窗口运行中变成模态时也重新判断）；不是最小化、全屏、置顶（keepAbove）、skipTaskbar；可移动、可缩放；不是固定尺寸（最小尺寸等于最大尺寸）；只在一个工作区上；不在用户浮动集合里；`resourceClass` 不在配置 `floatingClasses`（kwinrc `[Script-agino-tiling]`，逗号分隔，默认空）里。
 
 弹出窗口的验证（tile1，2026-11-01，平铺开着，看窗口出现时已有窗口有没有被重排）：
 - 不参与、不重排：编辑器的打开文件对话框（dialog、transient）和未保存提示（dialog、modal、transient）；终端的右键菜单和 `Qt.Popup`（不是 KWin 管理的窗口）；Qt 对话框（Qt 会自动补 transient）、`Qt.Tool`（utility）、`Qt.SplashScreen`、置顶窗口、DTK `DialogWindow`。
@@ -109,6 +109,8 @@ KWin 脚本只能**发起**会话总线调用（`DBusCall`），不能导出对�
 先按布局放，再读回 KWin 实际给出的几何；若某个窗口被 KWin 保持得比格子大（与别的窗口重叠），该屏改用"堆叠退让"。不按窗口声明的 `minSize` 判断：X11 上 KWin 并不强制大多数窗口（包括 DTK 窗口）的 WM_NORMAL_HINTS 最小尺寸，tile1 上声明最小宽 610 的终端被正常缩到 565（i3、sway 平铺时同样忽略这个提示）。退让时：主区照常；堆栈里的窗口都放在同一个矩形里（高度取堆栈区全高），焦点所在的那个在最上面。日志记一条 warning。
 
 缩小和放大主区域的快捷键（`AginoTilingShrinkMaster` / `AginoTilingGrowMaster`）按窗口声明的最小宽度限幅：主区域不窄于主区域窗口的 `minSize.width`，堆栈区不窄于堆栈里最宽的 `minSize.width`，每块屏幕各自算，取最严的。到了限度就停，不报错；已经越过限度时，这个方向的键不再往外走，反方向仍可用。两个最小宽度放不下时不限幅，交给上面的堆叠退让。只有这两个键这样做：布局本身仍不按 `minSize` 判断，窗口数量变化、屏幕变小时按上面的读回几何处理。起因：控制中心声明最小 910，缩小主区域把它压到 380（infra D-188 的真机复现）。纯函数 `ratioLimits`、`adjustedRatio` 在 `layout.js`，有单元测试。
+
+**自动浮动（0.1.4，D-188）**：每次布局前，按窗口声明的最小尺寸（`minSize`）排一遍，放不下格子的窗口自动浮动：先恢复它平铺前的大小，不再参与布局，其余窗口照常平铺；一次只浮动一个（放不下的那个），再对剩下的重新判断，最后一个窗口永远不浮动。浮动状态不记在配置里：每次布局都从头判断，所以窗口关了、屏幕变大、布局换成单窗口以后，它自己回到平铺。和用户手动浮动是两回事：手动浮动的窗口（`userFloating`）不受影响，自动浮动的窗口被拖动后也不会参与交换。这样"堆叠退让"只剩两种情况：KWin 实际保持得比格子大（读回几何，上面的做法）和单窗口放不下。纯函数 `misfit`、`floatedForMinimums` 在 `layout.js`，有单元测试。
 
 
 ### 4.4 进入和退出平铺
