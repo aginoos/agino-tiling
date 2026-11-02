@@ -12,7 +12,7 @@
         "Id": "agino-tiling",
         "License": "GPL-3.0-or-later",
         "Name": "agino tiling",
-        "Version": "0.1.4"
+        "Version": "0.1.5"
     },
     "X-Plasma-API": "declarativescript",
     "X-Plasma-API-Minimum-Version": "6.0",

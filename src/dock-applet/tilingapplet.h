@@ -29,6 +29,9 @@ public Q_SLOTS:
     // The user switched tiling on a desktop: update the persisted set.
     Q_SCRIPTABLE void TilingChanged(const QString &desktopId, bool tiled);
     Q_SCRIPTABLE QStringList GetTiledDesktops();
+    // The remembered window sizes of the script (design 4.8) as JSON text, kept across logins.
+    Q_SCRIPTABLE QString GetWindowSizes();
+    Q_SCRIPTABLE void SetWindowSizes(const QString &json);
 
 private:
     TilingApplet *m_applet;
@@ -55,6 +58,9 @@ public:
     void setCurrent(bool tiled);
     void setDesktopTiled(const QString &desktopId, bool tiled);
     QStringList tiledDesktops() const { return m_tiledDesktops; }
+    QString windowSizes() const { return m_windowSizes; }
+    // Keeps the text when it is a JSON object of at most MaxWindowSizeApps valid entries; false otherwise.
+    bool setWindowSizes(const QString &json);
 
     Q_INVOKABLE void toggle();
     Q_INVOKABLE void refreshToggleKey();
@@ -70,5 +76,6 @@ private:
     bool m_tiling = false;
     QString m_toggleKey;
     QStringList m_tiledDesktops;
+    QString m_windowSizes = QStringLiteral("{}");
     Dtk::Core::DConfig *m_config = nullptr;
 };

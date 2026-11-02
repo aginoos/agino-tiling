@@ -11,6 +11,16 @@
             "description": "IDs of the KWin virtual desktops that have automatic tiling switched on",
             "permissions": "readwrite",
             "visibility": "private"
+        },
+        "windowSizes": {
+            "value": "{}",
+            "serial": 0,
+            "flags": [],
+            "name": "Remembered window sizes",
+            "name[zh_CN]": "记住的窗口尺寸",
+            "description": "JSON object: per application (window class) the floating size and the size it was closed at in a tiled workspace, [floatingWidth, floatingHeight, tiledWidth, tiledHeight] (design 4.8)",
+            "permissions": "readwrite",
+            "visibility": "private"
         }
     }
 }

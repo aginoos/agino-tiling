@@ -12,6 +12,9 @@
 #include <QDBusPendingCall>
 #include <QDBusPendingCallWatcher>
 #include <QDebug>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QRegularExpression>
 
 DCORE_USE_NAMESPACE
@@ -23,6 +26,10 @@ static const QString ObjectPath = QStringLiteral("/org/agino/Tiling1");
 static const QString ConfigAppId = QStringLiteral("agino-tiling");
 static const QString ConfigName = QStringLiteral("org.agino.tiling");
 static const QString ConfigKey = QStringLiteral("tiledDesktops");
+static const QString SizesKey = QStringLiteral("windowSizes");
+// design 4.8: the script keeps at most 64 applications; the applet takes a bit more and refuses the rest
+static const int MaxWindowSizeApps = 128;
+static const int MaxWindowSizesBytes = 64 * 1024;
 // data/shortcuts: the on/off shortcut registered with dde-services' shortcut service
 static const QString ToggleShortcutId = QStringLiteral("agino-tiling.shortcut.toggle");
 
@@ -62,6 +69,41 @@ QStringList TilingAdaptor::GetTiledDesktops()
     return m_applet->tiledDesktops();
 }
 
+QString TilingAdaptor::GetWindowSizes()
+{
+    return m_applet->windowSizes();
+}
+
+void TilingAdaptor::SetWindowSizes(const QString &json)
+{
+    if (!m_applet->setWindowSizes(json))
+        qWarning() << "agino-tiling: refused the window sizes (not a table of at most" << MaxWindowSizeApps << "valid entries)";
+}
+
+// A table is a JSON object whose values are [floatingWidth, floatingHeight, tiledWidth, tiledHeight].
+static bool validWindowSizes(const QString &json)
+{
+    if (json.toUtf8().size() > MaxWindowSizesBytes)
+        return false;
+    QJsonParseError error;
+    const QJsonDocument doc = QJsonDocument::fromJson(json.toUtf8(), &error);
+    if (error.error != QJsonParseError::NoError || !doc.isObject())
+        return false;
+    const QJsonObject table = doc.object();
+    if (table.size() > MaxWindowSizeApps)
+        return false;
+    for (auto it = table.begin(); it != table.end(); ++it) {
+        const QJsonArray entry = it.value().toArray();
+        if (!it.value().isArray() || entry.size() != 4)
+            return false;
+        for (const QJsonValue &n : entry) {
+            if (!n.isDouble() || n.toDouble() < 0 || n.toDouble() > 100000)
+                return false;
+        }
+    }
+    return true;
+}
+
 TilingApplet::TilingApplet(QObject *parent)
     : DAppletDock(parent)
 {
@@ -72,10 +114,14 @@ bool TilingApplet::init()
     DAppletDock::init();
 
     m_config = DConfig::create(ConfigAppId, ConfigName, QString(), this);
-    if (m_config && m_config->isValid())
+    if (m_config && m_config->isValid()) {
         m_tiledDesktops = m_config->value(ConfigKey).toStringList();
-    else
-        qWarning() << "agino-tiling: DConfig" << ConfigName << "is not available, tiled desktops are not persisted";
+        const QString sizes = m_config->value(SizesKey).toString();
+        if (validWindowSizes(sizes))
+            m_windowSizes = sizes;
+    } else {
+        qWarning() << "agino-tiling: DConfig" << ConfigName << "is not available, tiled desktops and window sizes are not persisted";
+    }
 
     auto bus = QDBusConnection::sessionBus();
     auto adaptor = new TilingAdaptor(this);
@@ -125,6 +171,18 @@ void TilingApplet::setDesktopTiled(const QString &desktopId, bool tiled)
     m_tiledDesktops = next;
     if (m_config && m_config->isValid())
         m_config->setValue(ConfigKey, m_tiledDesktops);
+}
+
+bool TilingApplet::setWindowSizes(const QString &json)
+{
+    if (!validWindowSizes(json))
+        return false;
+    if (json == m_windowSizes)
+        return true;
+    m_windowSizes = json;
+    if (m_config && m_config->isValid())
+        m_config->setValue(SizesKey, m_windowSizes);
+    return true;
 }
 
 void TilingApplet::toggle()

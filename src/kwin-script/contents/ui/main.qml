@@ -28,6 +28,9 @@ Item {
     property var closing: ({})          // window ids being removed, still listed by Workspace.windows
     property var unmaximized: ({})      // window id -> time we undid its maximize (4.6)
     property var fallbackActive: ({})   // desktop id + output name -> true while 4.3 applies
+    property var sizes: ({})            // resourceClass (lower case) -> [floating w, h, tiled w, h] (4.8)
+    property var sizeQueue: []          // new floating windows to check once they settled: { id, at }
+    property bool sizesLoaded: false    // the table of the dock applet has been read
     property bool busy: false
     property bool reportWarned: false
 
@@ -194,6 +197,113 @@ Item {
         return true;
     }
 
+    // ---- remembered window sizes (design 4.8) ----
+    // Applications save the size of their window when it closes. A window closed in the layout saves the
+    // size of its cell, and the next window of that application, opened floating, would come up that small.
+    // The script keeps two sizes per application: the one it had floating and the one it was closed at in the
+    // layout; a new floating window that has the second one gets the first one.
+
+    // Windows whose size is kept: the ordinary ones that tiling could take, whatever their desktop and
+    // whether they were floated by hand.
+    function sizeKept(w) {
+        if (!w.normalWindow || w.transient || w.dialog || w.specialWindow || w.splash || w.utility || w.modal)
+            return false;
+        if (!w.resizeable || !w.moveable || w.resourceClass === "")
+            return false;
+        if (w.minSize.width > 0 && w.minSize.width === w.maxSize.width && w.minSize.height === w.maxSize.height)
+            return false;
+        return floatingClasses.indexOf(w.resourceClass.toLowerCase()) < 0;
+    }
+
+    // In the layout of a tiled desktop right now (a window that floats because of its minimum size is not).
+    function inLayout(id) {
+        if (autoFloating[id])
+            return false;
+        for (const did of Object.keys(order)) {
+            if ((order[did] || []).indexOf(id) >= 0)
+                return true;
+        }
+        return false;
+    }
+
+    function setSize(app, entry) {
+        sizes = Layout.remember(sizes, app, entry, Layout.MAX_REMEMBERED_APPS);
+        saveSizes.restart();
+    }
+
+    // The size of the window can be taken as the size the user sees.
+    function sizeSettled(w) {
+        return !w.fullScreen && w.maximizeMode === 0 && !w.move && !w.resize;
+    }
+
+    // A window goes away: remember its size. Closed in the layout, its size is the cell; the size it had
+    // before tiling stands in for the floating one while none is known. Closed floating, the size is the
+    // floating one and the one of the layout is forgotten (what the user chose last wins).
+    function rememberAtClose(w) {
+        if (!sizeKept(w) || !sizeSettled(w))
+            return;
+        const app = w.resourceClass.toLowerCase();
+        const id = wid(w);
+        const g = w.frameGeometry;
+        if (inLayout(id)) {
+            const known = sizes[app] || [0, 0, 0, 0];
+            const before = saved[id];
+            setSize(app, [known[0] || (before ? before.width : 0), known[1] || (before ? before.height : 0), g.width, g.height]);
+        } else {
+            setSize(app, [g.width, g.height, 0, 0]);
+        }
+    }
+
+    // The user resized or moved a floating window: that is the size to come back to.
+    function rememberFloating(w) {
+        if (inLayout(wid(w)) || !sizeKept(w) || !sizeSettled(w))
+            return;
+        const app = w.resourceClass.toLowerCase();
+        const known = sizes[app] || [0, 0, 0, 0];
+        const g = w.frameGeometry;
+        setSize(app, [g.width, g.height, known[2], known[3]]);
+    }
+
+    // A new window that is not in a layout: look at its size once it had time to settle (applications may
+    // restore their size a moment after they show the window).
+    function queueSizeCheck(w) {
+        if (sizeKept(w))
+            sizeQueue = sizeQueue.concat([{ id: wid(w), at: Date.now() }]);
+    }
+
+    function processSizeQueue() {
+        const now = Date.now();
+        const due = sizeQueue.filter(e => now - e.at >= 400);
+        if (due.length === 0)
+            return;
+        sizeQueue = sizeQueue.filter(e => now - e.at < 400);
+        const map = windowMap();
+        for (const e of due) {
+            const w = map[e.id];
+            if (w && sizeKept(w) && sizeSettled(w) && !inLayout(e.id))
+                checkNewWindow(w);
+        }
+    }
+
+    function checkNewWindow(w) {
+        const app = w.resourceClass.toLowerCase();
+        const known = sizes[app] || [0, 0, 0, 0];
+        const g = w.frameGeometry;
+        const width = Math.round(g.width), height = Math.round(g.height);
+        const atLayoutSize = Layout.sizesClose(width, height, known[2], known[3], Layout.SIZE_TOLERANCE);
+        if (atLayoutSize && known[0] > 0) {
+            const area = Workspace.clientArea(KWin.PlacementArea, w.output, desktopOf(w) || Workspace.currentDesktop);
+            const r = Layout.restoredRect(known[0], known[1], g, area);
+            w.frameGeometry = Qt.rect(r.x, r.y, r.width, r.height);
+            setSize(app, [known[0], known[1], 0, 0]);
+            log("size restored", app, width + "x" + height, "->", r.width + "x" + r.height);
+        } else if (!atLayoutSize) {
+            // the size the application asked for is the floating one (when it is the size of the layout
+            // and no floating size is known, nothing can be told)
+            setSize(app, [width, height, known[2], known[3]]);
+        }
+    }
+
     // ---- layout ----
 
     function layoutOf(did) {
@@ -358,6 +468,16 @@ Item {
 
     function sync() {
         getTiledCall.call();
+        getSizesCall.call();
+    }
+
+    // The remembered sizes of the last sessions (design 4.8); what this session noted already wins.
+    function applySizes(text) {
+        const hadSizes = Object.keys(sizes).length > 0;
+        sizes = Layout.mergeSizes(Layout.parseSizes(text), sizes, Layout.MAX_REMEMBERED_APPS);
+        sizesLoaded = true;
+        if (hadSizes)
+            saveSizes.restart();
     }
 
     // Only turns desktops on; never turns one off (the user may have just switched it on).
@@ -441,6 +561,7 @@ Item {
 
     // 4.5: drop on another tiled window swaps; right-edge resize of the master sets the ratio.
     function onMoveResizeFinished(w) {
+        rememberFloating(w);
         const desktop = inTiledOrder(w);
         if (!desktop || autoFloating[wid(w)])
             return;
@@ -560,6 +681,26 @@ Item {
         layoutDesktop(desktop);
     }
 
+    // The remembered sizes go to the dock applet a moment after the last change (a session may end soon after a window closes).
+    Timer {
+        id: saveSizes
+        interval: 500
+        onTriggered: {
+            if (!root.sizesLoaded)
+                return;
+            setSizesCall.arguments = [JSON.stringify(root.sizes)];
+            setSizesCall.call();
+        }
+    }
+
+    Timer {
+        id: sizeCheck
+        interval: 250
+        repeat: true
+        running: root.sizeQueue.length > 0
+        onTriggered: root.processSizeQueue()
+    }
+
     Timer {
         id: settle
         interval: 50
@@ -578,9 +719,12 @@ Item {
             if (root.anyTiled() && root.addWindow(w)) {
                 root.layoutDesktop(desktop);
                 settle.restart();
+            } else {
+                root.queueSizeCheck(w);
             }
         }
         function onWindowRemoved(w) {
+            root.rememberAtClose(w);
             const id = root.wid(w);
             root.closing = root.put(root.closing, id, true);
             root.userFloating = root.drop(root.userFloating, id);
@@ -635,6 +779,23 @@ Item {
         path: "/org/agino/Tiling1"
         dbusInterface: "org.agino.Tiling1"
         method: "TilingChanged"
+    }
+
+    DBusCall {
+        id: getSizesCall
+        service: "org.agino.Tiling1"
+        path: "/org/agino/Tiling1"
+        dbusInterface: "org.agino.Tiling1"
+        method: "GetWindowSizes"
+        onFinished: returnValue => root.applySizes(returnValue.length > 0 ? String(returnValue[0]) : "")
+    }
+
+    DBusCall {
+        id: setSizesCall
+        service: "org.agino.Tiling1"
+        path: "/org/agino/Tiling1"
+        dbusInterface: "org.agino.Tiling1"
+        method: "SetWindowSizes"
     }
 
     // The applet may not be running yet at login; it calls AginoTilingSync when it is.

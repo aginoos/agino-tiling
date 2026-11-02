@@ -252,4 +252,82 @@ TestCase {
         compare(Layout.applyMemberOrder(["a", "x", "b", "y", "c"], ["c", "a", "b"]), ["c", "x", "a", "y", "b"]);
         compare(Layout.applyMemberOrder(["a", "b"], ["a", "b"]), ["a", "b"]);
     }
+
+    // ---- remembered window sizes (design 4.8) ----
+
+    function test_sizesClose() {
+        verify(Layout.sizesClose(756, 613, 756, 613, 6));
+        verify(Layout.sizesClose(760, 610, 756, 613, 6));
+        verify(!Layout.sizesClose(763, 613, 756, 613, 6));
+        verify(!Layout.sizesClose(756, 620, 756, 613, 6));
+        // an unknown size never matches
+        verify(!Layout.sizesClose(0, 0, 0, 0, 6));
+        verify(!Layout.sizesClose(5, 5, 0, 0, 6));
+    }
+
+    function test_restoredRect_keepsCentreAndStaysInside() {
+        const current = { x: 100, y: 100, width: 400, height: 300 };
+        // bigger window around the same centre (300, 250): 800x500 would start at (-100, 0), so it is moved to x 0
+        compare(Layout.restoredRect(800, 500, current, area), { x: 0, y: 0, width: 800, height: 500 });
+        // a smaller one keeps the centre
+        compare(Layout.restoredRect(200, 100, current, area), { x: 200, y: 200, width: 200, height: 100 });
+        // would stick out on the left: moved into the area
+        const left = { x: 0, y: 0, width: 200, height: 200 };
+        compare(Layout.restoredRect(600, 400, left, area), { x: 0, y: 0, width: 600, height: 400 });
+        // would stick out on the right and at the bottom
+        const corner = { x: 800, y: 500, width: 200, height: 100 };
+        compare(Layout.restoredRect(600, 400, corner, area), { x: 400, y: 200, width: 600, height: 400 });
+        // bigger than the area: the window gets the size of the area
+        compare(Layout.restoredRect(3000, 2000, current, area), { x: 0, y: 0, width: 1000, height: 600 });
+        // an area that does not start at 0 (dock, second screen)
+        const second = { x: 1000, y: 40, width: 800, height: 500 };
+        compare(Layout.restoredRect(400, 300, { x: 1000, y: 40, width: 100, height: 100 }, second), { x: 1000, y: 40, width: 400, height: 300 });
+    }
+
+    function test_remember_ordersByUseAndCaps() {
+        let map = {};
+        map = Layout.remember(map, "a", [1, 2, 0, 0], 3);
+        map = Layout.remember(map, "b", [3, 4, 0, 0], 3);
+        map = Layout.remember(map, "c", [5, 6, 0, 0], 3);
+        compare(Object.keys(map), ["a", "b", "c"]);
+        // touching "a" moves it to the end and replaces the entry
+        map = Layout.remember(map, "a", [7, 8, 9, 10], 3);
+        compare(Object.keys(map), ["b", "c", "a"]);
+        compare(map.a, [7, 8, 9, 10]);
+        // a fourth application pushes the oldest one out
+        map = Layout.remember(map, "d", [1, 1, 1, 1], 3);
+        compare(Object.keys(map), ["c", "a", "d"]);
+        // the input is not changed
+        const before = { x: [1, 2, 3, 4] };
+        Layout.remember(before, "y", [1, 1, 1, 1], 5);
+        compare(Object.keys(before), ["x"]);
+        // fractions are rounded
+        compare(Layout.remember({}, "z", [10.4, 20.6, 0, 0], 3).z, [10, 21, 0, 0]);
+    }
+
+    function test_mergeSizes_extraWins() {
+        const base = { a: [1, 1, 0, 0], b: [2, 2, 0, 0] };
+        const extra = { b: [3, 3, 4, 4], c: [5, 5, 0, 0] };
+        const merged = Layout.mergeSizes(base, extra, 10);
+        compare(Object.keys(merged), ["a", "b", "c"]);
+        compare(merged.b, [3, 3, 4, 4]);
+        compare(Object.keys(Layout.mergeSizes(base, extra, 2)), ["b", "c"]);
+        compare(Layout.mergeSizes({}, {}, 5), {});
+    }
+
+    function test_parseSizes_leavesOutWhatIsNotATable() {
+        compare(Layout.parseSizes(""), {});
+        compare(Layout.parseSizes("not json"), {});
+        compare(Layout.parseSizes("[1,2]"), {});
+        compare(Layout.parseSizes("null"), {});
+        compare(Layout.parseSizes("{\"a\":[1,2,3,4],\"b\":[1,2,3],\"c\":\"x\",\"d\":[1,2,3,-4],\"e\":[5,6,7,8]}"), { a: [1, 2, 3, 4], e: [5, 6, 7, 8] });
+        // more entries than the cap: the last ones are kept
+        const big = {};
+        for (let i = 0; i < Layout.MAX_REMEMBERED_APPS + 5; ++i)
+            big["app" + i] = [i, i, 0, 0];
+        const parsed = Layout.parseSizes(JSON.stringify(big));
+        compare(Object.keys(parsed).length, Layout.MAX_REMEMBERED_APPS);
+        verify(parsed["app" + (Layout.MAX_REMEMBERED_APPS + 4)] !== undefined);
+        verify(parsed.app0 === undefined);
+    }
 }

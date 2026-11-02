@@ -224,3 +224,75 @@ function applyMemberOrder(order, members) {
         result.push(members.indexOf(id) >= 0 ? members[next++] : id)
     return result
 }
+
+// ---- remembered window sizes (docs/design.md 4.8) ----
+// A table per application (resourceClass, lower case): [floatingWidth, floatingHeight, tiledWidth,
+// tiledHeight], 0 = not known. The table is a plain object whose key order is the order of use (the
+// last key is the most recent); it is replaced, never changed in place.
+
+var SIZE_TOLERANCE = 6
+var MAX_REMEMBERED_APPS = 64
+
+// True when (w1, h1) is the size (w2, h2) within `tolerance` pixels on both sides; an unknown size (0)
+// never matches.
+function sizesClose(w1, h1, w2, h2, tolerance) {
+    return w2 > 0 && h2 > 0 && Math.abs(w1 - w2) <= tolerance && Math.abs(h1 - h2) <= tolerance
+}
+
+// The rect of a window of the given size that keeps the centre of `current` as far as the area allows
+// and lies completely inside the area (the window gets smaller than the size when it is bigger than the area).
+function restoredRect(width, height, current, area) {
+    const w = Math.max(1, Math.min(width, area.width))
+    const h = Math.max(1, Math.min(height, area.height))
+    const x = Math.min(area.x + area.width - w, Math.max(area.x, current.x + current.width / 2 - w / 2))
+    const y = Math.min(area.y + area.height - h, Math.max(area.y, current.y + current.height / 2 - h / 2))
+    return rect(x, y, w, h)
+}
+
+function validEntry(entry) {
+    return Array.isArray(entry) && entry.length === 4 && entry.every(n => typeof n === "number" && isFinite(n) && n >= 0 && n <= 100000)
+}
+
+// `map` with `app` set to `entry` and moved to the end; the oldest applications drop beyond `max`.
+function remember(map, app, entry, max) {
+    const copy = {}
+    for (const key of Object.keys(map)) {
+        if (key !== app)
+            copy[key] = map[key]
+    }
+    copy[app] = entry.map(n => Math.round(n))
+    const keys = Object.keys(copy)
+    const kept = {}
+    for (const key of keys.slice(Math.max(0, keys.length - max)))
+        kept[key] = copy[key]
+    return kept
+}
+
+// `extra` laid over `base` (extra entries win and count as more recent), at most `max` applications.
+function mergeSizes(base, extra, max) {
+    let result = {}
+    for (const key of Object.keys(base))
+        result = remember(result, key, base[key], max)
+    for (const key of Object.keys(extra))
+        result = remember(result, key, extra[key], max)
+    return result
+}
+
+// The table from its JSON text; anything that is not a table of valid entries gives an empty table
+// (entries that are not valid are left out).
+function parseSizes(text) {
+    let data
+    try {
+        data = JSON.parse(text)
+    } catch (e) {
+        return {}
+    }
+    if (data === null || typeof data !== "object" || Array.isArray(data))
+        return {}
+    let result = {}
+    for (const key of Object.keys(data)) {
+        if (validEntry(data[key]))
+            result = remember(result, key, data[key], MAX_REMEMBERED_APPS)
+    }
+    return result
+}
